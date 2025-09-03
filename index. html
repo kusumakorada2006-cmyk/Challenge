@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superbikes Dashboard</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#ff5c5c}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071021 0%,#081226 100%);color:#e6eef6;padding:28px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:22px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:12px;align-items:center}
+    .search{padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:inherit}
+    .select, .btn{padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    .btn{cursor:pointer}
+
+    main{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);padding:14px;border-radius:14px;display:flex;flex-direction:column;gap:10px}
+    .thumb{height:140px;border-radius:10px;background-size:cover;background-position:center}
+    .meta{display:flex;align-items:center;justify-content:space-between}
+    .brand{font-weight:600}
+    .price{font-weight:700;color:var(--accent)}
+    .tags{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{font-size:12px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+    .actions{display:flex;gap:8px}
+    .small{font-size:13px;padding:8px 10px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);cursor:pointer}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal{width:100%;max-width:800px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04)}
+    .modal-head{display:flex;align-items:center;gap:12px}
+    .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+    .specs{display:flex;flex-direction:column;gap:8px}
+    @media(max-width:640px){.modal-grid{grid-template-columns:1fr}}
+
+    footer{margin-top:20px;color:var(--muted);font-size:13px;text-align:center}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Superbikes Dashboard</h1>
+      <div style="color:var(--muted);font-size:13px">Browse, search and filter high-performance motorcycles</div>
+    </div>
+
+    <div class="controls">
+      <input id="search" class="search" placeholder="Search model, brand or feature" />
+      <select id="filter-brand" class="select">
+        <option value="all">All brands</option>
+      </select>
+      <select id="sort" class="select">
+        <option value="pop">Sort: Popular</option>
+        <option value="price-asc">Price ↑</option>
+        <option value="price-desc">Price ↓</option>
+        <option value="hp-desc">Horsepower ↓</option>
+      </select>
+      <button id="addDemo" class="btn">Add demo bike</button>
+    </div>
+  </header>
+
+  <main id="grid"></main>
+
+  <div id="modal" class="modal-backdrop" role="dialog" aria-hidden="true">
+    <div class="modal" role="document">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="modal-head">
+          <div id="modal-image" style="width:140px;height:90px;border-radius:8px;background-size:cover;background-position:center"></div>
+          <div>
+            <div id="modal-title" style="font-weight:700;font-size:18px"></div>
+            <div id="modal-sub" style="color:var(--muted);font-size:13px"></div>
+          </div>
+        </div>
+        <div>
+          <button id="closeModal" class="small">Close</button>
+        </div>
+      </div>
+      <div class="modal-grid">
+        <div>
+          <h4 style="margin:6px 0 8px 0">Overview</h4>
+          <div id="modal-desc" style="color:var(--muted);line-height:1.5"></div>
+        </div>
+        <div>
+          <h4 style="margin:6px 0 8px 0">Specs</h4>
+          <div class="specs" id="modal-specs"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Tip: click "Add demo bike" to append an example card. Images use unsplash placeholders.</footer>
+
+  <script>
+    const data = [
+      {id:1,brand:'Ducati',model:'Panigale V4',price:27995,hp:214,img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=60',tags:['Superbike','2024'] ,desc:'A race-bred V4 superbike with cutting-edge aerodynamics.'},
+      {id:2,brand:'Yamaha',model:'YZF-R1',price:17499,hp:200,img:'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=60',tags:['Sport','Track'] ,desc:'Inline-four superbike inspired by MotoGP technology.'},
+      {id:3,brand:'Kawasaki',model:'Ninja H2',price:29000,hp:231,img:'https://images.unsplash.com/photo-1524820847990-8a0266e0f3b9?auto=format&fit=crop&w=800&q=60',tags:['Supercharged','Limited'] ,desc:'Ultra-high performance with supercharger boost.'},
+      {id:4,brand:'BMW',model:'S1000RR',price:19995,hp:205,img:'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=60',tags:['Tech','Sport'] ,desc:'Precision handling and advanced rider aids.'}
+    ];
+
+    const grid = document.getElementById('grid');
+    const search = document.getElementById('search');
+    const filterBrand = document.getElementById('filter-brand');
+    const sort = document.getElementById('sort');
+    const modal = document.getElementById('modal');
+
+    function uniqueBrands(){
+      const brands = [...new Set(data.map(d=>d.brand))];
+      brands.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;filterBrand.appendChild(o)})
+    }
+
+    function render(list){
+      grid.innerHTML='';
+      if(list.length===0){grid.innerHTML='<div style="grid-column:1/-1;color:var(--muted);text-align:center;padding:36px;border:1px dashed rgba(255,255,255,0.03);border-radius:12px">No bikes found.</div>';return}
+      list.forEach(b=>{
+        const c=document.createElement('article');c.className='card';
+        c.innerHTML=`
+          <div class="thumb" style="background-image:url('${b.img}')"></div>
+          <div class="meta"><div><div class="brand">${b.brand} <span style="font-weight:500;color:var(--muted);font-size:13px">${b.model}</span></div></div><div class="price">$${numberWithCommas(b.price)}</div></div>
+          <div style="color:var(--muted);font-size:13px">HP: ${b.hp}</div>
+          <div class="tags">${b.tags.map(t=>`<div class="tag">${t}</div>`).join('')}</div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px" class="actions">
+            <button class="small" data-id="${b.id}" onclick="openModal(${b.id})">Details</button>
+            <div style="display:flex;gap:8px"><button class="small" onclick="duplicate(${b.id})">Duplicate</button><button class="small" onclick="remove(${b.id})">Remove</button></div>
+          </div>
+        `;
+        grid.appendChild(c);
+      })
+    }
+
+    function numberWithCommas(x){return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",")}
+
+    function applyFilters(){
+      const q=search.value.trim().toLowerCase();
+      let list = data.slice();
+      const brand = filterBrand.value;
+      if(brand!=='all') list = list.filter(d=>d.brand===brand);
+      if(q) list = list.filter(d=> (d.brand+ ' '+ d.model + ' ' + d.tags.join(' ')+ ' ' + d.desc).toLowerCase().includes(q) );
+      if(sort.value==='price-asc') list.sort((a,b)=>a.price-b.price)
+      if(sort.value==='price-desc') list.sort((a,b)=>b.price-a.price)
+      if(sort.value==='hp-desc') list.sort((a,b)=>b.hp-b.hp?b.hp-a.hp:0)
+      render(list)
+    }
+
+    function openModal(id){
+      const b = data.find(x=>x.id===id);if(!b) return;
+      document.getElementById('modal-image').style.backgroundImage = `url('${b.img}')`;
+      document.getElementById('modal-title').textContent = `${b.brand} ${b.model}`;
+      document.getElementById('modal-sub').textContent = `$${numberWithCommas(b.price)} • ${b.hp} HP`;
+      document.getElementById('modal-desc').textContent = b.desc;
+      const specs = document.getElementById('modal-specs'); specs.innerHTML='';
+      [['Brand',b.brand],['Model',b.model],['Price',`$${numberWithCommas(b.price)}`],['Horsepower',b.hp],['Tags',b.tags.join(', ')]]
+        .forEach(([k,v])=>{const el=document.createElement('div');el.innerHTML=`<strong>${k}:</strong> <span style="color:var(--muted)">${v}</span>`;specs.appendChild(el)})
+      modal.style.display='flex'; modal.setAttribute('aria-hidden','false');
+    }
+    document.getElementById('closeModal').addEventListener('click',()=>{modal.style.display='none';modal.setAttribute('aria-hidden','true')})
+    modal.addEventListener('click',e=>{if(e.target===modal){modal.style.display='none';modal.setAttribute('aria-hidden','true')}})
+
+    function remove(id){
+      const idx=data.findIndex(d=>d.id===id);if(idx>-1){data.splice(idx,1);applyFilters()}
+    }
+    function duplicate(id){
+      const b=data.find(d=>d.id===id);if(!b) return;const copy=Object.assign({},JSON.parse(JSON.stringify(b)));copy.id=Math.max(...data.map(x=>x.id))+1;data.push(copy);uniqueBrands();applyFilters()
+    }
+
+    document.getElementById('addDemo').addEventListener('click',()=>{
+      const newId = Math.max(...data.map(d=>d.id))+1;
+      data.push({id:newId,brand:'Aprilia',model:'RSV4',price:18900,hp:201,img:'https://images.unsplash.com/photo-1471477897398-5f5e4c8b1f5c?auto=format&fit=crop&w=800&q=60',tags:['Race','V4'],desc:'A high-revving V4 with focused chassis dynamics.'});
+      uniqueBrands();applyFilters();
+    })
+
+    // wire inputs
+    search.addEventListener('input',applyFilters);
+    filterBrand.addEventListener('change',applyFilters);
+    sort.addEventListener('change',applyFilters);
+
+    // init
+    uniqueBrands();render(data);
+
+    // expose for inline onclick (small demo only)
+    window.openModal = openModal; window.remove = remove; window.duplicate = duplicate;
+  </script>
+</body>
+</html>
